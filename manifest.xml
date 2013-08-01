@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE extension SYSTEM "ext-1.0.dtd">
+
+<!--
+/*
+	Copyright (C) 2008 Garciat (Gabriel Garcia T.) <http://garciat.us.to/>
+	Released under GPL license version 3 or any later version <http://www.gnu.org/licenses/gpl.html>
+	
+	This extension is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This extension is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this extension.  If not, see <http://www.gnu.org/licenses/>.
+*/
+-->
+
+<extension engine="1.0">
+	<id>gravatar</id>
+	<title>Gravatar</title>
+	<version>1.1.1</version>
+	<description>Allows users to use Gravatar.</description>
+	<author>Garciat</author>
+	<minversion>1.3</minversion>
+	<maxtestedon>1.3.2</maxtestedon>
+	
+	<install>
+		<![CDATA[
+if(!defined('EXT_CUR_VERSION'))
+{
+	$new_config = array(
+		'o_gravatar_force'		=> '0',
+		'o_gravatar_default'	=> '',
+		'o_gravatar_rating'		=> 'g'
+	);
+
+	foreach($new_config as $key => $value)
+	{
+		if (!isset($forum_config[$key]))
+		{
+			$query = array(
+				'INSERT'	=> 'conf_name, conf_value',
+				'INTO'		=> 'config',
+				'VALUES'	=> '\''.$key.'\', \''.$value.'\''
+			);
+			$forum_db->query_build($query) or error(__FILE__, __LINE__);
+		}
+	}
+
+	$forum_db->add_field('users', 'gravatar', 'TINYINT(1) UNSIGNED', true, '0');
+}
+		]]>
+	</install>
+	
+	<uninstall>
+		<![CDATA[
+$query = array(
+	'DELETE'	=> 'config',
+	'WHERE'		=> 'conf_name in (\'o_gravatar_force\', \'o_gravatar_default\', \'o_gravatar_rating\')',
+);
+$forum_db->query_build($query) or error(__FILE__, __LINE__);
+
+$forum_db->drop_field('users', 'gravatar');
+		]]>
+	</uninstall>
+	
+	<hooks>
+		<hook id="fn_generate_avatar_markup_start">
+			<![CDATA[
+if (file_exists(FORUM_CACHE_DIR.'cache_gravatar.php') && !defined('FORUM_GRAVATAR_LOADED'))
+	include FORUM_CACHE_DIR.'cache_gravatar.php';
+
+if (!defined('FORUM_GRAVATAR_LOADED'))
+{
+	require $ext_info['path'].'/functions.php';
+
+	generate_gravatar_cache();
+	require FORUM_CACHE_DIR.'cache_gravatar.php';
+}
+
+if(isset($forum_gravatar[$user_id]))
+	return '<img src="'.$forum_gravatar[$user_id].'" alt="" />';
+			]]>
+		</hook>
+		<hook id="pf_change_details_pre_redirect">
+			<![CDATA[
+if($section == 'settings' && $user['gravatar'] != $form['gravatar'] && $forum_config['o_gravatar_force'] == 0)
+{
+	require $ext_info['path'].'/functions.php';
+	generate_gravatar_cache();
+}
+			]]>
+		</hook>
+		<hook id="pf_change_details_settings_validation">
+			<![CDATA[
+$form['gravatar'] = isset($_POST['form']['gravatar']) ? 1 : $forum_config['o_gravatar_force'];
+			]]>
+		</hook>
+		<hook id="pf_change_details_avatar_pre_fieldset">
+			<![CDATA[
+if (file_exists($ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php'))
+	include $ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php';
+else
+	include $ext_info['path'].'/lang/English/gravatar.php';
+?>
+			<div class="ct-box info-box">
+				<p class="important"><?php echo ($forum_config['o_gravatar_force']) ? $lang_gravatar['Gravatar forced note'] : $lang_gravatar['Gravatar note']; ?></p>
+   			</div>
+<?php
+			]]>
+		</hook>
+		<hook id="pf_change_details_settings_pre_show_sigs_checkbox">
+			<![CDATA[
+if (file_exists($ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php'))
+	include $ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php';
+else
+	include $ext_info['path'].'/lang/English/gravatar.php';
+?>
+				<div class="sf-set set<?php echo ++$forum_page['item_count'] ?>">
+					<div class="sf-box checkbox">
+						<span class="fld-input"><input<?php if($forum_config['o_gravatar_force']==1) echo ' disabled="disabled"'; ?> type="checkbox" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar]" value="1"<?php if ($user['gravatar'] == '1' || $forum_config['o_gravatar_force'] == '1') echo ' checked="checked"' ?> /></span>
+						<label for="fld<?php echo $forum_page['fld_count'] ?>"><span><?php echo $lang_gravatar['Gravatar'] ?></span> <?php echo ($forum_config['o_gravatar_force'] == '1') ? $lang_gravatar['Gravatar forced'] : $lang_gravatar['Gravatar help'] ?></label>
+					</div>
+				</div>
+<?php
+			]]>
+		</hook>
+		<hook id="aop_features_validation">
+			<![CDATA[
+$form['gravatar_force'] = isset($form['gravatar_force']) ? 1 : 0;
+			]]>
+		</hook>
+		<hook id="aop_qr_update_permission_option">
+			<![CDATA[
+if(substr($key, 0, 8) == 'gravatar') $gravatar_updated['o_'.$key] = $value;
+			]]>
+		</hook>
+		<hook id="aop_pre_redirect">
+			<![CDATA[
+if(isset($gravatar_updated))
+{
+	foreach($gravatar_updated as $k=>$v) $forum_config[$k]=$v;
+	require $ext_info['path'].'/functions.php';
+	generate_gravatar_cache();
+}
+			]]>
+		</hook>
+		<hook id="aop_features_avatars_fieldset_end" priority="1">
+			<![CDATA[
+if (file_exists($ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php'))
+	include $ext_info['path'].'/lang/'.$forum_user['language'].'/'.$ext_info['id'].'.php';
+else
+	include $ext_info['path'].'/lang/English/gravatar.php';
+?>
+			<fieldset class="frm-group group<?php echo ++$forum_page['group_count'] ?>">
+				<legend class="group-legend"><span><?php echo $lang_gravatar['Gravatar legend'] ?></span></legend>
+				<div class="sf-set set<?php echo ++$forum_page['item_count'] ?>">
+					<div class="sf-box checkbox">
+						<span class="fld-input"><input type="checkbox" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar_force]" value="1"<?php if ($forum_config['o_gravatar_force'] == '1') echo ' checked="checked"' ?> /></span>
+						<label for="fld<?php echo $forum_page['fld_count'] ?>"><span><?php echo $lang_gravatar['Force gravatar'] ?></span> <?php echo $lang_gravatar['Force gravatar help'] ?></label>
+					</div>
+				</div>
+				<div class="sf-set set<?php echo ++$forum_page['item_count'] ?>">
+					<div class="sf-box text">
+						<label for="fld<?php echo ++$forum_page['fld_count'] ?>"><span><?php echo $lang_gravatar['Default'] ?></span><small><?php echo $lang_gravatar['Default help'] ?></small></label><br />
+						<span class="fld-input"><input type="text" id="fld<?php echo $forum_page['fld_count'] ?>" name="form[gravatar_default]" size="50" value="<?php echo $forum_config['o_gravatar_default'] ?>" /></span>
+					</div>
+				</div>
+				<fieldset class="mf-set set<?php echo ++$forum_page['item_count'] ?>">
+					<legend><span><?php echo $lang_gravatar['Rating'] ?></span></legend>
+					<div class="mf-box">
+						<div class="mf-item">
+							<span class="fld-input"><input type="radio" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar_rating]" value="g"<?php if ($forum_config['o_gravatar_rating'] == 'g') echo ' checked="checked"' ?> /></span>
+							<label for="fld<?php echo $forum_page['fld_count'] ?>"><?php echo $lang_gravatar['Rating g'] ?></label>
+						</div>
+						<div class="mf-item">
+							<span class="fld-input"><input type="radio" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar_rating]" value="pg"<?php if ($forum_config['o_gravatar_rating'] == 'pg') echo ' checked="checked"' ?> /></span>
+							<label for="fld<?php echo $forum_page['fld_count'] ?>"><?php echo $lang_gravatar['Rating pg'] ?></label>
+						</div>
+						<div class="mf-item">
+							<span class="fld-input"><input type="radio" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar_rating]" value="r"<?php if ($forum_config['o_gravatar_rating'] == 'r') echo ' checked="checked"' ?> /></span>
+							<label for="fld<?php echo $forum_page['fld_count'] ?>"><?php echo $lang_gravatar['Rating r'] ?></label>
+						</div>
+						<div class="mf-item">
+							<span class="fld-input"><input type="radio" id="fld<?php echo ++$forum_page['fld_count'] ?>" name="form[gravatar_rating]" value="x"<?php if ($forum_config['o_gravatar_rating'] == 'x') echo ' checked="checked"' ?> /></span>
+							<label for="fld<?php echo $forum_page['fld_count'] ?>"><?php echo $lang_gravatar['Rating x'] ?></label>
+						</div>
+					</div>
+				</fieldset>
+			</fieldset>
+<?php
+			]]>
+		</hook>
+	</hooks>
+</extension>
