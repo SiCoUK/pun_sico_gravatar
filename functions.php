@@ -32,7 +32,7 @@ function generate_gravatar_cache()
 	if (!$fh)
 		error('Unable to write configuration cache file to cache directory. Please make sure PHP has write access to the directory \'cache\'.', __FILE__, __LINE__);
 	
-	fwrite($fh, '<?php'."\n\n".'define(\'FORUM_GRAVATAR_LOADED\', 1);'."\n\n".'$forum_gravatar = '.var_export($output, true).';'."\n\n".'?>');
+	fwrite($fh, '<?php'."\n\n".'define(\'FORUM_GRAVATAR_LOADED\', 1);'."\n\n".'global $forum_gravatar;'."\n\n".'$forum_gravatar = '.var_export($output, true).';'."\n\n".'?>');
 	
 	fclose($fh);
 }
