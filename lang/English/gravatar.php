@@ -9,7 +9,7 @@ $lang_gravatar = array(
     'Force gravatar help' => 'Every user\'s avatar will be their Gravatar.',
 
     'Default' => 'Default avatar',
-    'Default help' => 'Available options: <a href="http://scott.sherrillmix.com/blog/blogger/wp_identicon/">identicon</a>, <a href="http://scott.sherrillmix.com/blog/blogger/wp_monsterid/">monsterid</a>, <a href="http://www.shamusyoung.com/twentysidedtale/?p=1462">wavatar</a>, or custom URL. If this is empty, Gravatar\'s blue G will be shown.',
+    'Default help' => 'Available options: mm (Mystery Man), <a href="http://scott.sherrillmix.com/blog/blogger/wp_identicon/">identicon</a>, <a href="http://scott.sherrillmix.com/blog/blogger/wp_monsterid/">monsterid</a>, <a href="http://www.shamusyoung.com/twentysidedtale/?p=1462">wavatar</a>, or custom URL. If this is empty, Gravatar\'s blue G will be shown.',
 
     'Rating' => 'Image rating filter',
     'Rating g' => '<strong>Rated G:</strong> All ages admitted. General audiences.',
