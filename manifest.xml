@@ -30,7 +30,7 @@
 <extension engine="1.0">
     <id>sico_gravatar</id>
     <title>SiCo Gravatar</title>
-    <version>1.1.2</version>
+    <version>1.1.2.8</version>
     <description>Allows users to use Gravatar for their avatar.</description>
     <author>Garciat</author>
     <minversion>1.3</minversion>
@@ -79,26 +79,15 @@
     <hooks>
         <hook id="fn_generate_avatar_markup_start">
             <![CDATA[
-            if (file_exists(FORUM_CACHE_DIR.'cache_gravatar.php') && !defined('FORUM_GRAVATAR_LOADED'))
-                include_once(FORUM_CACHE_DIR.'cache_gravatar.php');
-
-            if (!defined('FORUM_GRAVATAR_LOADED'))
-            {
-                require $ext_info['path'].'/functions.php';
-
-                generate_gravatar_cache();
-                require FORUM_CACHE_DIR.'cache_gravatar.php';
-            }
-
-            if(isset($forum_gravatar[$user_id]))
-                return '<img src="'.$forum_gravatar[$user_id].'" alt="" />';
+            require_once($ext_info['path'] . '/functions.php');
+            return sico_gravatar_generate_avatar_markup_start($user_id);
             ]]>
         </hook>
         <hook id="pf_change_details_pre_redirect">
             <![CDATA[
             if($section == 'settings' && $user['gravatar'] != $form['gravatar'] && $forum_config['o_gravatar_force'] == 0)
             {
-                require $ext_info['path'].'/functions.php';
+                require_once($ext_info['path'].'/functions.php');
                 generate_gravatar_cache();
             }
             ]]>
@@ -152,7 +141,7 @@
             if(isset($gravatar_updated))
             {
                 foreach($gravatar_updated as $k=>$v) $forum_config[$k]=$v;
-                require $ext_info['path'].'/functions.php';
+                require_once($ext_info['path'].'/functions.php');
                 generate_gravatar_cache();
             }
             ]]>

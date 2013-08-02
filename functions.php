@@ -1,17 +1,50 @@
 <?php
+/**
+ * Generate the gravatar markup
+ * 
+ * @global type $forum_gravatar
+ * @param int $user_id
+ * @return string
+ */
+function sico_gravatar_generate_avatar_markup_start($user_id)
+{
+    global $forum_gravatar;
+    
+    if (file_exists(FORUM_CACHE_DIR.'cache_gravatar.php') && !defined('FORUM_GRAVATAR_LOADED')) {
+        include_once(FORUM_CACHE_DIR.'cache_gravatar.php');
+    }
+    
+    if (!defined('FORUM_GRAVATAR_LOADED')) {
+        generate_gravatar_cache();
+        require FORUM_CACHE_DIR.'cache_gravatar.php';
+    }
+    
+    if(isset($forum_gravatar[$user_id])) {
+        return '<img src="'.$forum_gravatar[$user_id].'" alt="" />';
+    }
+}
+
 function generate_gravatar_cache()
 {
     global $forum_db, $forum_config;
 
+    // Select all the users with a gravatar
     $query = array(
         'SELECT'	=> 'id, gravatar, email',
         'FROM'		=> 'users',
         'WHERE'		=> 'id!=1'
     );
+    
+    // If we are not forcing gravatars only select users who have enabled it
+    if ($forum_config['o_gravatar_force'] != 1) {
+        $query['WHERE'] .= ' AND gravatar=1';
+    }
+    
     $result = $forum_db->query_build($query) or error(__FILE__, __LINE__);
 
     $output = array();
 
+    // Loop through the users and create the gravatar cache
     while ($cur_user = $forum_db->fetch_assoc($result))
     {
         if($cur_user['gravatar'] == 1 || $forum_config['o_gravatar_force'] == 1)
